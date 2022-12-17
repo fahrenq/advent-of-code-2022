@@ -1,4 +1,10 @@
+#r "System.Security.Cryptography"
+
 open System.IO
+open System.Text
+
+open System.Security.Cryptography
+
 
 let INPUT = File.ReadAllText(__SOURCE_DIRECTORY__ + "/input.txt")
 let TEST_INPUT = ">>><<><>><<<>><>>><<<>>><<<><<<>><>><<>>"
@@ -159,66 +165,124 @@ let parseMovements input =
 let infiniteMovements (movements: Direction[]) =
   Seq.initInfinite (fun i -> movements[i % movements.Length])
 
-let pt1 =
-  infiniteMovements (parseMovements INPUT)
-  |> Seq.scan
-    (fun (rows: int64[][], lastShape, lastShapeN) direction ->
-      if rows.Length = 0 then
-        let nextShapeN = lastShapeN + 1L
-        let nextShape = getNextShape lastShape
-        spawnShape rows nextShapeN (shapeToFn nextShape), nextShape, nextShapeN
-      else
-        let newRows, isMoved = moveShape lastShapeN direction rows
-
-        match direction with
-        | Left
-        | Right -> newRows, lastShape, lastShapeN
-        | Down ->
-          if isMoved then
-            newRows, lastShape, lastShapeN
-          else
-            let nextShapeN = lastShapeN + 1L
-            let nextShape = getNextShape lastShape
-
-            spawnShape newRows nextShapeN (shapeToFn nextShape),
-            nextShape,
-            nextShapeN
-    )
-    ([||], Square, EMPTY)
-  |> Seq.find (fun (_, _, n) -> n = 2022L)
-  |> (fun (rows, _, _) -> rows)
-  |> Array.filter (fun row -> row |> Array.exists (fun x -> x <> EMPTY))
-  |> Array.length
-
-
-
-// |> Array.filter (fun row -> row |> Array.exists (fun x -> x <> EMPTY))
-// |> Array.length
-// |> printfn "%d"
-
-// infiniteMovements (parseMovements INPUT)
-// |> Seq.scan
-//   (fun (rows: int64[][], lastShape, lastStoppedShapeN) direction ->
-//     if rows.Length = 0 then
-//       let nextShape = getNextShape lastShape
-//       spawnShape rows (shapeToFn nextShape), nextShape, lastStoppedShapeN
-//     else
-//       let newRows, isMoved = moveLastShape direction rows
+// let pt1 =
+//   infiniteMovements (parseMovements INPUT)
+//   |> Seq.scan
+//     (fun (rows: int64[][], lastShape, lastShapeN) direction ->
+//       if rows.Length = 0 then
+//         let nextShapeN = lastShapeN + 1L
+//         let nextShape = getNextShape lastShape
+//         spawnShape rows nextShapeN (shapeToFn nextShape), nextShape, nextShapeN
+//       else
+//         let newRows, isMoved = moveShape lastShapeN direction rows
 //
-//       match direction with
-//       | Left
-//       | Right -> newRows, lastShape, lastStoppedShapeN
-//       | Down ->
-//         if isMoved then
-//           newRows, lastShape, lastStoppedShapeN
-//         else
-//           let nextShape = getNextShape lastShape
-//           spawnShape newRows (shapeToFn nextShape), nextShape, lastStoppedShapeN
-//   )
-//   ([||], Square, EMPTY)
-// |> Seq.find (fun (_, _, n) -> n = 1000000000000L - 1L)
-// // |> Seq.find (fun (_, _, n) -> n = 2022L - 1L)
-// |> (fun (rows, _, _) -> rows)
-// |> Array.filter (fun row -> row |> Array.exists (fun x -> x <> EMPTY))
-// |> Array.length
-// |> printfn "%d"
+//         match direction with
+//         | Left
+//         | Right -> newRows, lastShape, lastShapeN
+//         | Down ->
+//           if isMoved then
+//             newRows, lastShape, lastShapeN
+//           else
+//             let nextShapeN = lastShapeN + 1L
+//             let nextShape = getNextShape lastShape
+//
+//             spawnShape newRows nextShapeN (shapeToFn nextShape),
+//             nextShape,
+//             nextShapeN
+//     )
+//     ([||], Square, EMPTY)
+//   |> Seq.find (fun (_, _, n) -> n = 2022L)
+//   |> (fun (rows, _, _) -> rows)
+//   |> Array.filter (fun row -> row |> Array.exists (fun x -> x <> EMPTY))
+//   |> Array.length
+//
+//
+
+
+let notEmptyRows (rows: int64[][]) =
+  rows |> Array.filter (fun row -> row |> Array.exists (fun x -> x <> EMPTY))
+
+let mutable prevHeight = 0
+let increases: ResizeArray<int> = ResizeArray<_>()
+
+// let pt2 =
+//   infiniteMovements (parseMovements INPUT)
+//   |> Seq.scan
+//     (fun (rows: int64[][], lastShape, lastShapeN) direction ->
+//       if rows.Length = 0 then
+//         let nextShapeN = lastShapeN + 1L
+//         let nextShape = getNextShape lastShape
+//         spawnShape rows nextShapeN (shapeToFn nextShape), nextShape, nextShapeN
+//       else
+//         let newRows, isMoved = moveShape lastShapeN direction rows
+//
+//         match direction with
+//         | Left
+//         | Right -> newRows, lastShape, lastShapeN
+//         | Down ->
+//           if isMoved then
+//             newRows, lastShape, lastShapeN
+//           else
+//             let nextShapeN = lastShapeN + 1L
+//
+//             let newHeight = (newRows |> notEmptyRows |> Array.length)
+//             let heightIncrease = newHeight - prevHeight
+//             increases.Add heightIncrease
+//             prevHeight <- newHeight
+//
+//             let nextShape = getNextShape lastShape
+//
+//             spawnShape newRows nextShapeN (shapeToFn nextShape),
+//             nextShape,
+//             nextShapeN
+//     )
+//     ([||], Square, EMPTY)
+//   |> Seq.find (fun (_, _, n) -> n = 565L)
+//   |> (fun (rows, _, _) -> rows)
+//   |> Array.filter (fun row -> row |> Array.exists (fun x -> x <> EMPTY))
+//   |> Array.length
+//
+let increasesLines = increases.ToArray() |> Array.map (fun x -> x.ToString())
+
+// File.WriteAllLines("/tmp/increases.txt", increasesLines)
+
+// loop starts at 565 chars >
+// height 889
+
+let preCycleStr =
+  "1 2 3 2 0 0 0 2 0 2 1 2 2 0 2 1 2 2 2 2 1 3 2 2 0 1 2 3 0 2 1 3 3 2 0 0 2 0 0 2 0 2 3 2 0 1 3 2 4 2 0 0 0 1 0 1 3 3 0 0 1 3 2 4 0 1 3 2 4 2 1 3 2 2 0 1 2 3 2 2 1 3 3 4 0 1 3 3 2 0 1 3 3 0 0 1 2 2 2 0 1 3 2 2 0 0 3 0 4 0 1 3 0 4 0 0 1 2 0 0 1 3 2 2 0 1 3 3 4 0 1 2 3 0 1 1 2 3 0 1 1 2 3 0 0 0 1 3 0 1 1 2 3 2 2 1 2 1 3 0 0 2 2 2 0 0 2 2 1 2 1 3 2 2 0 1 2 3 0 2 1 3 2 2 0 1 3 0 4 2 1 3 3 2 0 1 3 3 0 2 1 3 3 2 2 1 3 2 0 0 1 2 1 0 1 1 3 3 0 0 0 2 3 0 0 1 2 3 0 0 1 3 3 2 0 1 3 3 0 0 1 3 2 0 0 1 3 3 0 0 0 2 3 0 0 1 2 3 4 0 1 3 3 2 0 1 3 2 0 0 1 1 2 2 2 0 0 3 0 0 0 2"
+
+let cycleStr =
+  "3 2 0 1 2 1 3 0 1 2 2 4 0 1 2 3 0 0 1 3 3 4 0 1 3 3 4 0 1 3 2 2 0 1 3 3 2 0 0 2 2 0 0 1 3 2 4 0 0 0 3 0 0 1 2 1 2 2 1 3 3 2 0 0 2 2 0 2 1 3 2 2 2 1 2 2 4 0 1 3 0 2 2 1 2 2 2 2 1 2 2 2 2 1 3 3 2 0 1 3 2 1 2 1 3 2 0 0 1 2 2 1 1 1 2 3 2 0 1 3 0 1 2 1 2 1 2 0 1 3 2 1 1 1 3 2 2 2 1 2 2 2 2 1 3 2 2 0 1 3 2 0 0 1 2 1 3 0 1 3 2 4 2 1 3 3 2 2 1 3 2 0 1 1 3 3 0 0 1 3 3 4 2 1 3 3 2 0 1 3 0 2 0 1 3 2 4 2 1 3 3 2 2 1 2 3 0 0 1 3 0 4 0 1 3 3 2 0 1 3 2 2 0 1 2 1 4 0 1 2 3 0 0 1 2 3 0 0 0 3 0 1 0 1 3 3 0 2 1 2 1 2 0 1 3 2 2 2 0 0 3 4 2 1 3 3 4 0 1 3 3 0 0 1 2 1 2 2 1 3 3 4 0 1 3 0 3 0 1 3 2 1 2 1 2 2 0 0 1 3 2 4 0 0 0 1 2 0 1 3 3 0 0 1 2 1 2 0 0 2 3 0 0 1 3 2 2 0 1 2 2 0 0 1 2 2 1 0 0 3 2 4 0 1 3 3 0 0 1 3 2 0 0 1 3 2 4 0 1 2 2 4 0 1 3 3 0 0 0 2 0 3 0 1 3 2 2 2 1 3 2 2 2 1 2 3 2 0 0 2 3 4 0 0 0 3 0 2 0 2 1 2 0 1 3 3 2 0 1 2 1 4 2 1 2 1 3 0 0 3 0 1 2 1 3 3 2 0 1 3 2 2 2 1 3 2 2 0 1 3 3 0 0 1 3 3 0 0 0 2 2 2 2 1 2 3 4 2 1 3 3 4 0 1 3 2 1 0 0 3 3 4 0 1 2 3 0 0 1 3 0 3 0 0 2 1 1 0 1 3 2 2 2 1 3 2 4 0 1 2 1 2 0 1 3 3 4 0 1 3 2 1 0 0 3 2 2 0 1 3 2 2 0 1 2 3 0 2 1 3 3 0 0 1 3 3 0 0 1 2 2 4 0 1 3 0 3 0 1 3 0 3 2 0 3 0 3 0 0 2 2 0 0 1 3 3 0 2 1 3 3 0 0 1 2 3 0 1 1 3 2 0 0 1 3 2 2 2 1 3 0 2 0 1 2 1 2 2 1 3 3 2 0 1 3 3 2 2 1 2 1 2 2 1 2 3 4 0 1 2 3 2 0 1 3 3 4 0 0 2 3 0 0 0 2 3 2 2 1 3 3 4 0 1 3 2 2 0 1 3 3 2 0 1 3 3 0 0 1 2 1 2 0 0 3 0 4 2 1 3 3 0 0 1 0 3 2 0 1 3 2 2 0 1 3 2 0 0 1 2 1 1 0 1 3 3 2 0 1 3 2 4 0 0 2 2 0 2 1 3 3 4 2 0 3 3 0 2 0 0 3 0 0 1 3 3 0 2 1 2 1 2 2 1 0 3 2 0 1 3 3 2 2 1 3 2 2 2 0 0 3 0 0 1 3 0 2 0 1 3 3 4 0 1 3 3 2 2 1 3 3 0 0 1 3 3 2 0 1 2 2 2 0 1 3 0 2 0 1 2 2 2 0 1 3 3 0 0 0 2 2 2 0 1 3 3 0 0 1 3 2 4 0 1 3 3 4 0 1 2 1 1 2 1 2 2 4 0 1 3 0 4 0 0 2 3 0 0 0 2 3 4 0 1 3 3 4 0 1 3 3 0 2 1 3 3 2 0 1 2 2 1 1 1 3 3 2 2 1 3 2 2 0 1 3 0 3 2 1 3 3 4 0 1 3 2 2 0 1 3 2 4 0 1 3 3 2 2 1 3 2 1 1 1 2 2 2 2 1 3 3 2 0 1 0 0 4 2 1 2 3 4 0 1 2 1 3 2 0 3 2 2 0 1 0 3 1 2 1 3 3 0 0 1 2 3 0 1 1 3 3 2 0 1 3 2 2 0 1 3 3 0 0 1 3 3 4 0 1 3 3 0 0 0 2 3 0 0 1 1 2 2 0 0 2 2 2 0 0 2 3 0 0 1 3 0 4 2 1 2 2 2 0 1 3 3 4 0 1 3 3 2 0 1 2 3 0 1 1 2 1 2 2 1 3 0 4 2 1 2 3 0 1 0 3 0 4 2 1 3 3 0 0 1 2 1 2 0 1 3 0 3 0 1 3 2 0 0 0 2 1 3 0 1 1 2 1 2 0 3 0 2 0 1 2 2 2 2 1 3 2 0 2 1 3 2 1 2 1 3 2 0 0 1 3 2 2 0 0 2 0 2 0 0 3 2 2 0 0 2 3 2 2 1 3 3 2 2 1 3 0 2 0 1 3 3 2 2 1 3 2 2 2 1 3 3 2 0 1 2 3 0 1 0 3 2 2 0 0 2 3 0 0 1 3 3 4 0 1 3 2 2 0 1 3 3 0 0 1 3 3 4 0 1 2 3 2 2 1 3 3 0 0 1 2 3 0 0 1 3 2 0 0 1 3 0 1 1 1 3 2 2 0 1 3 3 4 2 1 3 3 2 2 1 2 2 0 0 1 3 3 0 0 1 3 2 2 2 0 3 0 0 2 0 2 3 2 0 0 2 3 0 2 1 3 0 4 0 1 3 3 0 2 0 3 0 4 0 1 3 2 2 0 1 3 3 4 2 1 3 3 4 2 1 3 0 2 2 0 0 3 2 2 1 3 3 0 0 1 3 0 2 0 1 2 2 0 0 1 3 3 4 2 0 3 0 0 2 1 3 2 4 0 1 3 2 0 2 1 3 3 0 2 0 2 1 2 0 1 3 2 2 0 1 3 2 0 0 1 3 3 2 2 1 2 2 2 0 1 0 3 2 2 1 2 2 0 2 1 3 2 2 0 1 2 1 2 0 1 3 2 0 0 0 3 3 0 0 1 3 3 2 0 1 2 2 0 0 1 3 2 4 0 0 2 2 2 0 1 2 3 0 2 1 2 1 2 0 1 3 3 2 0 0 2 2 2 0 1 3 3 4 2 0 0 3 0 0 0 2 0 3 0 1 3 3 0 0 1 3 2 4 2 1 3 2 0 2 1 3 2 2 0 1 3 3 2 0 1 3 3 0 0 1 2 3 2 0 1 3 0 3 0 1 2 3 0 0 1 2 1 2 0 1 2 2 0 0 1 3 0 4 2 1 2 3 2 0 1 2 3 0 0 1 3 3 4 2 1 3 2 2 0 1 3 0 1 0 1 2 3 0 0 0 3 3 0 0 1 3 0 3 0 0 2 1 2 2 1 3 2 0 0 1 1 3 0 2 0 2 3 4 0 1 3 2 2 0 1 3 2 0 0 0 2 3 2 0 1 2 3 2 0 1 3 2 0 2 1 2 2 2 2 1 3 3 0 0 1 3 3 0 0 1 3 3 4 2 1 3 3 0 0 1 0 3 2 2 1 2 2 2 0 0 2 1 4 0 0 1 2 2 0 0 2 1 4 0 1 2 3 0 0 1 3 3 2 0 1 1 2 2 2 1 3 2 2 0 1 3 3 0 0 1 3 3 2 2 1 3 2 2 0 0 2 2 2 0 1 3 2 2 0 1 3 2 0 0 1 2 1 2 2 0 0 3 0 0 1 3 3 4 0 1 3 3 0 0 0 1 3 2 0 1 3 3 4 0 0 2 3 2 0 1 3 2 2 0 0 2 3 2 0 1 3 3 4 2 1 3 0 3 0 0 3 0 2 0 1 3 3 4 0 1 3"
+
+let preCycles = preCycleStr.Split " " |> Array.map int
+let cycles = cycleStr.Split " " |> Array.map int
+
+let cycleShapes = cycles.LongLength
+let preCyclesShapes = preCycles.LongLength
+let preCycleHeight = preCycles |> Array.sum |> int64
+let cycleHeight = cycles |> Array.sum |> int64
+
+let GOAL_SHAPES = 1000000000000L
+let fullCyclesInGoal = (GOAL_SHAPES - preCyclesShapes) / cycleShapes
+
+
+// now find our position after pre + full cycles
+let posSoFar = preCyclesShapes + (cycleShapes * fullCyclesInGoal)
+
+let remainingShapes = GOAL_SHAPES - posSoFar
+
+let remainingHeight =
+  cycles |> Array.take (int remainingShapes) |> Array.sum |> int64
+
+let answer = preCycleHeight + (cycleHeight * fullCyclesInGoal) + remainingHeight
+
+
+(*
+Holy shit this was chaotic and not pretty.
+I solved it by selecting pattern in VS Code and looking where it highlights
+repetitions.
+
+LINE BELOW WAS SUGGESTED BY COPILOT:
+I mean, I might not be the best programmer, but I'm not a complete idiot.
+*)
